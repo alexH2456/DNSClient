@@ -1,12 +1,13 @@
 package ca.mcgill.dnsclient;
 
-import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -14,17 +15,51 @@ public class DnsClient {
 
   private int timeout = 5000;
   private int maxRetries = 3;
+  private int retries = 0;
   private int dnsPort = 53;
   private byte[] server = new byte[4];
   private String name;
-  private int dnsPacketSize = 512;
   private String queryType = "A";
 
   public DnsClient(String args[]) {
+    parseArgs(args);
+  }
+
+  public void sendRcvRequest() {
+    if (retries > maxRetries) {
+      System.out.println("ERROR\tMax number of retries " + maxRetries + " exceeded");
+      retries = 0;
+      return;
+    }
     try {
-      parseArgs(args);
+      DatagramSocket clientSocket = new DatagramSocket();
+      clientSocket.setSoTimeout(timeout);
+      InetAddress ipAddress = InetAddress.getByAddress(server);
+
+      byte[] sendData = DnsRequest.constructDnsRequest(name, queryType);
+      byte[] receiveData = new byte[1024];
+
+      DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, ipAddress, dnsPort);
+      clientSocket.send(sendPacket);
+
+      DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+      clientSocket.receive(receivePacket);
+
+      clientSocket.close();
+
+      HashMap<String, Integer> response = DnsResponse.analyzeResponse(receivePacket.getData());
+
+
+    } catch (SocketException e) {
+      System.out.println("ERROR\tCreating socket: " + e.getMessage());
+    } catch (SocketTimeoutException e) {
+      System.out.println("ERROR\tTimeout on DNS request: Retrying...");
+      retries += 1;
+      sendRcvRequest();
+    } catch (UnknownHostException e) {
+      System.out.println("ERROR\tUnknown host");
     } catch (Exception e) {
-      throw new IllegalArgumentException("Invalid arguments");
+      e.printStackTrace();
     }
   }
 
@@ -36,7 +71,7 @@ public class DnsClient {
       String arg = argsIterator.next();
       switch (arg) {
         case "-t":
-          timeout = Integer.parseInt(argsIterator.next());
+          timeout = Integer.parseInt(argsIterator.next()) * 1000;
           break;
         case "-r":
           maxRetries = Integer.parseInt(argsIterator.next());
@@ -66,7 +101,7 @@ public class DnsClient {
               if (num < 0 || num > 255) {
                 throw new IllegalArgumentException("Given IP field out of range");
               }
-              server[i] = (byte)num;
+              server[i] = (byte) num;
             }
             name = argsIterator.next();
           }
@@ -75,36 +110,6 @@ public class DnsClient {
     }
     if (name == null || server == null) {
       throw new IllegalArgumentException("Must specify DNS server and domain name");
-    }
-  }
-
-  public void sendRcvRequest() {
-    try {
-      DatagramSocket clientSocket = new DatagramSocket();
-      InetAddress ipAddress = InetAddress.getByAddress(server);
-
-      byte[] sendData = new byte[dnsPacketSize];
-      byte[] receiveData = new byte[dnsPacketSize];
-
-      DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, ipAddress, dnsPort);
-      clientSocket.send(sendPacket);
-
-      DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-      clientSocket.receive(receivePacket);
-
-      clientSocket.close();
-
-      String sentPacket = new String(sendPacket.getData());
-      String receivedPacket = new String(receivePacket.getData());
-
-      System.out.println("SENT: " + sentPacket + "\nRECIEVED: " + receivedPacket);
-
-    } catch (SocketException e) {
-      e.printStackTrace();
-    } catch (UnknownHostException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
-      e.printStackTrace();
     }
   }
 }

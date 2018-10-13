@@ -7,7 +7,7 @@ public class DnsApp {
       DnsClient dnsClient = new DnsClient(args);
       dnsClient.sendRcvRequest();
     } catch (Exception e) {
-      System.out.println(e.toString());
+      System.out.println("ERROR\t" + e.getMessage());
     }
   }
 
