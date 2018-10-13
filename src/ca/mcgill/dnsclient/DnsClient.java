@@ -7,7 +7,6 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -17,6 +16,7 @@ public class DnsClient {
   private int maxRetries = 3;
   private int retries = 0;
   private int dnsPort = 53;
+  private String ipAddress;
   private byte[] server = new byte[4];
   private String name;
   private String queryType = "A";
@@ -36,31 +36,42 @@ public class DnsClient {
       clientSocket.setSoTimeout(timeout);
       InetAddress ipAddress = InetAddress.getByAddress(server);
 
-      byte[] sendData = DnsRequest.constructDnsRequest(name, queryType);
-      byte[] receiveData = new byte[1024];
-
+      DnsRequest dnsRequest = new DnsRequest(name, queryType);
+      byte[] sendData = dnsRequest.constructDnsRequest();
       DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, ipAddress, dnsPort);
-      clientSocket.send(sendPacket);
 
+      DnsResponse dnsResponse = new DnsResponse();
+      byte[] receiveData = new byte[1024];
       DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+
+      printRequestInfo();
+      long start = System.currentTimeMillis();
+      clientSocket.send(sendPacket);
       clientSocket.receive(receivePacket);
+      long stop = System.currentTimeMillis();
+      System.out.println("Response received after " + (stop - start) / 1000.0 + " seconds (" + retries + " retries)");
 
       clientSocket.close();
 
-      HashMap<String, Integer> response = DnsResponse.analyzeResponse(receivePacket.getData());
-
+      dnsResponse.analyzeResponse(receivePacket.getData());
 
     } catch (SocketException e) {
-      System.out.println("ERROR\tCreating socket: " + e.getMessage());
+      System.out.println("ERROR\tFailed to create socket: " + e.getMessage());
     } catch (SocketTimeoutException e) {
       System.out.println("ERROR\tTimeout on DNS request: Retrying...");
       retries += 1;
       sendRcvRequest();
     } catch (UnknownHostException e) {
-      System.out.println("ERROR\tUnknown host");
+      System.out.println("ERROR\tUnknown host: " + e.getMessage());
     } catch (Exception e) {
       e.printStackTrace();
     }
+  }
+
+  private void printRequestInfo() {
+    System.out.println("DnsClient sending request for " + name);
+    System.out.println("Server: " + ipAddress);
+    System.out.println("Request type: " + queryType);
   }
 
   private void parseArgs(String[] args) {
@@ -87,8 +98,8 @@ public class DnsClient {
           break;
         default:
           if (arg.startsWith("@")) {
-            String address = arg.substring(1);
-            String[] addrFields = address.split("\\.");
+            ipAddress = arg.substring(1);
+            String[] addrFields = ipAddress.split("\\.");
             if (addrFields.length != 4) {
               throw new IllegalArgumentException("Invalid IP address length");
             }

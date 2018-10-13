@@ -3,12 +3,15 @@ package ca.mcgill.dnsclient;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Random;
 
 public class DnsHeader {
 
-  public static byte[] constructHeader() throws IOException {
+  public DnsHeader() {
+
+  }
+
+  public byte[] constructHeader() throws IOException {
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
     DataOutputStream header = new DataOutputStream(byteStream);
 
@@ -35,9 +38,7 @@ public class DnsHeader {
     return byteStream.toByteArray();
   }
 
-  public static HashMap<String, Integer> analyzeHeader(byte[] header) throws IOException {
-    HashMap<String, Integer> headerInfo = new HashMap<>();
+  public void analyzeHeader(byte[] header) throws IOException {
 
-    return headerInfo;
   }
 }

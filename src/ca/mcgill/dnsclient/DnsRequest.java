@@ -7,7 +7,17 @@ import java.nio.charset.StandardCharsets;
 
 public class DnsRequest {
 
-  public static byte[] constructDnsRequest(String domainName, String queryType) throws IOException {
+  private String domainName;
+  private String queryType;
+
+  public DnsRequest(String domainName, String queryType) {
+    this.domainName = domainName;
+    this.queryType = queryType;
+  }
+
+  public byte[] constructDnsRequest() throws IOException {
+    DnsHeader dnsHeader = new DnsHeader();
+
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
     DataOutputStream request = new DataOutputStream(byteStream);
 
@@ -41,7 +51,7 @@ public class DnsRequest {
     byte[] requestData = byteStream.toByteArray();
 
     byteStream = new ByteArrayOutputStream();
-    byteStream.write(DnsHeader.constructHeader());
+    byteStream.write(dnsHeader.constructHeader());
     byteStream.write(requestData);
 
     return byteStream.toByteArray();
