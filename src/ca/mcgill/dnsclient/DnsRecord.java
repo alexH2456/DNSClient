@@ -23,6 +23,8 @@ public class DnsRecord {
   }
 
   public void parseRecord(byte[] response, int startIdx) throws Exception {
+    int firstIdx = startIdx;
+
     byte[] buff;
     String ptrStr;
 
@@ -37,6 +39,7 @@ public class DnsRecord {
     if (ptrStr.charAt(0) == '1' && ptrStr.charAt(1) == '1') {
       int ptr = Integer.parseInt(ptrStr.substring(2, 16), 2);
       name = buildName(response, ptr);
+      startIdx += 2;
     } else {
       int ptr = startIdx;
       StringBuilder newName = new StringBuilder();
@@ -46,18 +49,17 @@ public class DnsRecord {
         String label = new String(labelBytes);
         newName.append(label);
         newName.append(".");
-        ptr += length + 1;
+        ptr += length;
       }
       newName.deleteCharAt(newName.length() - 1);
       name = newName.toString();
 
-      numBytes = ptr - startIdx;
-      startIdx += numBytes + 1;
+      startIdx += numBytes;
     }
 
     // Get query type
-    int qType = DnsUtils
-        .bytesToUnsignedInt(new byte[]{response[startIdx + 2], response[startIdx + 3]});
+    int qType = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx], response[startIdx + 1]});
+    startIdx += 2;
     switch (qType) {
       case 0x0001:
         queryType = QueryType.A;
@@ -76,24 +78,23 @@ public class DnsRecord {
     }
 
     // Get class type
-    classType = DnsUtils
-        .bytesToUnsignedInt(new byte[]{response[startIdx + 4], response[startIdx + 5]});
+    classType = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx], response[startIdx + 1]});
+    startIdx += 2;
     if (classType != 0x0001) {
       throw new Exception("Invalid class type in response");
     }
 
     // Get TTL
-    ttl = DnsUtils.bytesToUnsignedInt(
-        new byte[]{response[startIdx + 6], response[startIdx + 7], response[startIdx + 8],
-            response[startIdx + 9]});
+    ttl = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx], response[startIdx + 1], response[startIdx + 2], response[startIdx + 3]});
+    startIdx += 4;
 
     // Get RData length
-    rdLength = DnsUtils
-        .bytesToUnsignedInt(new byte[]{response[startIdx + 10], response[startIdx + 11]});
-    numBytes += 12 + rdLength;
+    rdLength = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx], response[startIdx + 1]});
+    startIdx += 2;
+    numBytes += (startIdx - firstIdx) + 1 + rdLength;
 
     // Parse RDATA
-    buff = Arrays.copyOfRange(response, startIdx + 12, startIdx + 12 + rdLength);
+    buff = Arrays.copyOfRange(response, startIdx, startIdx + rdLength);
     if (queryType == QueryType.A) {
       InetAddress ip = InetAddress.getByAddress(buff);
       ipAddress = ip.getHostAddress();

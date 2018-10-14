@@ -64,7 +64,7 @@ public class DnsResponse {
       newRecord.parseRecord(response, idx);
       dnsRecords.add(newRecord);
       parsedAnswers += 1;
-      idx += newRecord.getNumBytes() + 1;
+      idx += newRecord.getNumBytes();
     }
     System.out.println("");
   }
