@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
@@ -19,7 +20,7 @@ public class DnsClient {
   private String ipAddress;
   private byte[] server = new byte[4];
   private String name;
-  private String queryType = "A";
+  private QueryType queryType = QueryType.A;
 
   public DnsClient(String args[]) {
     parseArgs(args);
@@ -52,8 +53,7 @@ public class DnsClient {
       System.out.println("Response received after " + (stop - start) / 1000.0 + " seconds (" + retries + " retries)");
 
       clientSocket.close();
-
-      dnsResponse.analyzeResponse(receivePacket.getData());
+      dnsResponse.parseResponse(receivePacket.getData());
 
     } catch (SocketException e) {
       System.out.println("ERROR\tFailed to create socket: " + e.getMessage());
@@ -64,7 +64,11 @@ public class DnsClient {
     } catch (UnknownHostException e) {
       System.out.println("ERROR\tUnknown host: " + e.getMessage());
     } catch (Exception e) {
-      e.printStackTrace();
+      if (e.getMessage() == null) {
+        e.printStackTrace();
+      } else {
+        System.out.println("ERROR\t" + e.getMessage());
+      }
     }
   }
 
@@ -91,10 +95,10 @@ public class DnsClient {
           dnsPort = Integer.parseInt(argsIterator.next());
           break;
         case "-mx":
-          queryType = "MX";
+          queryType = QueryType.MX;
           break;
         case "-ns":
-          queryType = "NS";
+          queryType = QueryType.NS;
           break;
         default:
           if (arg.startsWith("@")) {
@@ -115,6 +119,12 @@ public class DnsClient {
               server[i] = (byte) num;
             }
             name = argsIterator.next();
+            String[] labels = name.split("\\.");
+            for (String label : labels) {
+              if (label.getBytes(StandardCharsets.UTF_8).length > 63) {
+                throw new IllegalArgumentException("Illegal domain name, label too long");
+              }
+            }
           }
           break;
       }
