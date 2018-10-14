@@ -10,7 +10,6 @@ public class DnsUtils {
     for (byte b : buff) {
       format.format("%02x", b);
     }
-
     return Integer.decode("0x" + format.toString());
   }
 

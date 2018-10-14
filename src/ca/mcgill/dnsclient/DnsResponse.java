@@ -1,23 +1,20 @@
 package ca.mcgill.dnsclient;
 
+import ca.mcgill.dnsclient.utils.DnsUtils;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class DnsResponse {
 
   private String domainName;
-  private int queryType;
-  private int classType;
-  private int ttl;
-  private int rdLength;
-  private int rData;
-  private int preference;
-  private int exchange;
   private DnsHeader header;
   private ResponseCode responseCode;
+  private ArrayList<DnsRecord> dnsRecords;
 
   public DnsResponse() {
     this.header = new DnsHeader();
+    this.dnsRecords = new ArrayList<>();
   }
 
   public void parseResponse(byte[] response) throws Exception {
@@ -49,41 +46,34 @@ public class DnsResponse {
           responseCode = ResponseCode.NO_ERROR;
           break;
     }
+    if (header.getQuestionCount() != 1) {
+      throw new Exception("Response header question count does not match");
+    }
+    int answerCount = header.getAnswerCount();
+    int addCount = header.getAddRecords();
+
+    // Parse answer records
+    int idx = 27;
+    int parsedAnswers = 0;
+    while (parsedAnswers != answerCount) {
+      DnsRecord newRecord = new DnsRecord();
+      newRecord.parseRecord(response, idx);
+      dnsRecords.add(newRecord);
+      parsedAnswers += 1;
+      idx += newRecord.getNumBytes() + 1;
+    }
+    System.out.println("");
   }
 
   public DnsHeader getHeader() {
     return header;
   }
 
-  public int getClassType() {
-    return classType;
-  }
-
-  public int getExchange() {
-    return exchange;
-  }
-
-  public int getPreference() {
-    return preference;
-  }
-
-  public int getQueryType() {
-    return queryType;
-  }
-
-  public int getrData() {
-    return rData;
-  }
-
-  public int getRdLength() {
-    return rdLength;
-  }
-
-  public int getTtl() {
-    return ttl;
-  }
-
   public String getDomainName() {
     return domainName;
+  }
+
+  public ResponseCode getResponseCode() {
+    return responseCode;
   }
 }

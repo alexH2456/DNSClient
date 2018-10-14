@@ -67,7 +67,8 @@ public class DnsClient {
       if (e.getMessage() == null) {
         e.printStackTrace();
       } else {
-        System.out.println("ERROR\t" + e.getMessage());
+        System.out.println("ERROR\t" + e.getCause() + "\t" + e.getMessage());
+        e.printStackTrace();
       }
     }
   }
