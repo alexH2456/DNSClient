@@ -8,13 +8,15 @@ import java.util.Arrays;
 public class DnsResponse {
 
   private String domainName;
+  private int startIdx;
   private DnsHeader header;
   private ResponseCode responseCode;
   private ArrayList<DnsRecord> dnsRecords;
 
-  public DnsResponse() {
+  public DnsResponse(int headerSize) {
     this.header = new DnsHeader();
     this.dnsRecords = new ArrayList<>();
+    this.startIdx = headerSize;
   }
 
   public void parseResponse(byte[] response) throws Exception {
@@ -38,13 +40,15 @@ public class DnsResponse {
         return;
       case "0100":
         responseCode = ResponseCode.NOT_IMPLEMENTED;
-        throw new Exception("Not implemented: the name server does not support the requested kind of query");
+        throw new Exception(
+            "Not implemented: the name server does not support the requested kind of query");
       case "0101":
         responseCode = ResponseCode.REFUSED;
-        throw new Exception("Refused: the name server refuses to perform the requested operation for policy reasons");
+        throw new Exception(
+            "Refused: the name server refuses to perform the requested operation for policy reasons");
       default:
-          responseCode = ResponseCode.NO_ERROR;
-          break;
+        responseCode = ResponseCode.NO_ERROR;
+        break;
     }
     if (header.getQuestionCount() != 1) {
       throw new Exception("Response header question count does not match");
@@ -53,7 +57,7 @@ public class DnsResponse {
     int addCount = header.getAddRecords();
 
     // Parse answer records
-    int idx = 27;
+    int idx = startIdx;
     int parsedAnswers = 0;
     while (parsedAnswers != answerCount) {
       DnsRecord newRecord = new DnsRecord();

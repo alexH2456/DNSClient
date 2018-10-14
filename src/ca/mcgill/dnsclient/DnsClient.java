@@ -41,7 +41,7 @@ public class DnsClient {
       byte[] sendData = dnsRequest.constructDnsRequest();
       DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, ipAddress, dnsPort);
 
-      DnsResponse dnsResponse = new DnsResponse();
+      DnsResponse dnsResponse = new DnsResponse(sendData.length);
       byte[] receiveData = new byte[1024];
       DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 

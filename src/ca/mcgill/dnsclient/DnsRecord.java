@@ -26,7 +26,7 @@ public class DnsRecord {
     byte[] buff;
     String ptrStr;
 
-    buff = new byte[]{response[startIdx], response[startIdx+1]};
+    buff = new byte[]{response[startIdx], response[startIdx + 1]};
     StringBuilder ptrStrBuilder = new StringBuilder(Integer.toBinaryString(DnsUtils.bytesToUnsignedInt(buff)));
     while (ptrStrBuilder.length() != 16) {
       ptrStrBuilder.insert(0, '0');
@@ -48,15 +48,16 @@ public class DnsRecord {
         newName.append(".");
         ptr += length + 1;
       }
-      newName.deleteCharAt(newName.length()-1);
+      newName.deleteCharAt(newName.length() - 1);
       name = newName.toString();
-      
+
       numBytes = ptr - startIdx;
       startIdx += numBytes + 1;
     }
 
     // Get query type
-    int qType = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx+2], response[startIdx+3]});
+    int qType = DnsUtils
+        .bytesToUnsignedInt(new byte[]{response[startIdx + 2], response[startIdx + 3]});
     switch (qType) {
       case 0x0001:
         queryType = QueryType.A;
@@ -75,16 +76,20 @@ public class DnsRecord {
     }
 
     // Get class type
-    classType = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx+4], response[startIdx+5]});
+    classType = DnsUtils
+        .bytesToUnsignedInt(new byte[]{response[startIdx + 4], response[startIdx + 5]});
     if (classType != 0x0001) {
       throw new Exception("Invalid class type in response");
     }
 
     // Get TTL
-    ttl = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx+6], response[startIdx+7], response[startIdx+8], response[startIdx+9]});
+    ttl = DnsUtils.bytesToUnsignedInt(
+        new byte[]{response[startIdx + 6], response[startIdx + 7], response[startIdx + 8],
+            response[startIdx + 9]});
 
     // Get RData length
-    rdLength = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx+10], response[startIdx+11]});
+    rdLength = DnsUtils
+        .bytesToUnsignedInt(new byte[]{response[startIdx + 10], response[startIdx + 11]});
     numBytes += 12 + rdLength;
 
     // Parse RDATA
@@ -115,7 +120,7 @@ public class DnsRecord {
       newName.append(".");
       ptr += labelLength + 1;
     }
-    newName.deleteCharAt(newName.length()-1);
+    newName.deleteCharAt(newName.length() - 1);
     return newName.toString();
   }
 
