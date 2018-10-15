@@ -17,49 +17,20 @@ public class DnsRecord {
   private int preference;
   private String exchange;
   private int numBytes;
+  private int currentIdx;
 
   public DnsRecord() {
     this.numBytes = 0;
   }
 
-  public void parseRecord(byte[] response, int startIdx) throws Exception {
-    int firstIdx = startIdx;
+  public void parseRecord(byte[] response, int start) throws Exception {
+    currentIdx = start;
 
-    byte[] buff;
-    String ptrStr;
-
-    buff = new byte[]{response[startIdx], response[startIdx + 1]};
-    StringBuilder ptrStrBuilder = new StringBuilder(Integer.toBinaryString(DnsUtils.bytesToUnsignedInt(buff)));
-    while (ptrStrBuilder.length() != 16) {
-      ptrStrBuilder.insert(0, '0');
-    }
-    ptrStr = ptrStrBuilder.toString();
-
-    // Domain name parsing with compression
-    if (ptrStr.charAt(0) == '1' && ptrStr.charAt(1) == '1') {
-      int ptr = Integer.parseInt(ptrStr.substring(2, 16), 2);
-      name = buildName(response, ptr);
-      startIdx += 2;
-    } else {
-      int ptr = startIdx;
-      StringBuilder newName = new StringBuilder();
-      while (response[ptr] != 0) {
-        int length = response[ptr];
-        byte[] labelBytes = Arrays.copyOfRange(response, ptr + 1, ptr + 1 + length);
-        String label = new String(labelBytes);
-        newName.append(label);
-        newName.append(".");
-        ptr += length;
-      }
-      newName.deleteCharAt(newName.length() - 1);
-      name = newName.toString();
-
-      startIdx += numBytes;
-    }
+    name = buildName(response, currentIdx);
 
     // Get query type
-    int qType = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx], response[startIdx + 1]});
-    startIdx += 2;
+    int qType = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+    currentIdx += 2;
     switch (qType) {
       case 0x0001:
         queryType = QueryType.A;
@@ -78,51 +49,99 @@ public class DnsRecord {
     }
 
     // Get class type
-    classType = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx], response[startIdx + 1]});
-    startIdx += 2;
+    classType = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+    currentIdx += 2;
     if (classType != 0x0001) {
       throw new Exception("Invalid class type in response");
     }
 
     // Get TTL
-    ttl = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx], response[startIdx + 1], response[startIdx + 2], response[startIdx + 3]});
-    startIdx += 4;
+    ttl = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1], response[currentIdx + 2], response[currentIdx + 3]});
+    currentIdx += 4;
 
     // Get RData length
-    rdLength = DnsUtils.bytesToUnsignedInt(new byte[]{response[startIdx], response[startIdx + 1]});
-    startIdx += 2;
-    numBytes += (startIdx - firstIdx) + 1 + rdLength;
+    rdLength = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+    currentIdx += 2;
 
     // Parse RDATA
-    buff = Arrays.copyOfRange(response, startIdx, startIdx + rdLength);
+    byte[] buff = Arrays.copyOfRange(response, currentIdx, currentIdx + rdLength);
     if (queryType == QueryType.A) {
       InetAddress ip = InetAddress.getByAddress(buff);
       ipAddress = ip.getHostAddress();
     } else if (queryType == QueryType.NS) {
-      nameServer = buildName(buff, 0);
+      nameServer = buildRData(response, currentIdx);
     } else if (queryType == QueryType.CNAME) {
-      alias = buildName(buff, 0);
+      alias = buildRData(response, currentIdx);
     } else {
-      preference = DnsUtils.bytesToUnsignedInt(new byte[]{buff[0], buff[1]});
-      exchange = buildName(buff, 2);
+      preference = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+      exchange = buildRData(response, currentIdx + 2);
     }
+    currentIdx += rdLength;
+
+    numBytes = (currentIdx - start);
   }
 
-  private String buildName(byte[] buff, int ptr) {
-    StringBuilder newName = new StringBuilder();
-    while (buff[ptr] != 0) {
-      int labelLength = buff[ptr];
-      if (labelLength < 0) {
-        System.out.println(labelLength);
+  private String buildName(byte[] response, int ptr) {
+    int compressed;
+    StringBuilder strBuilder = new StringBuilder();
+
+    compressed = isCompressed(response, ptr);
+    if (compressed != 0) {
+      ptr = compressed;
+    }
+    while (response[ptr] != 0) {
+      int labelLength = response[ptr];
+      byte[] labelBytes = Arrays.copyOfRange(response, ptr + 1, ptr + 1 + labelLength);
+      strBuilder.append(new String(labelBytes));
+      strBuilder.append(".");
+      ptr += labelLength + 1;
+
+      if (compressed == 0) {
+        currentIdx += labelLength + 1;
       }
-      byte[] labelBytes = Arrays.copyOfRange(buff, ptr + 1, ptr + 1 + labelLength);
-      String label = new String(labelBytes);
-      newName.append(label);
-      newName.append(".");
+    }
+    if (compressed != 0) {
+      currentIdx += 2;
+    }
+    strBuilder.deleteCharAt(strBuilder.length() - 1);
+    return strBuilder.toString();
+  }
+
+  private String buildRData(byte[] response, int ptr) {
+    int compressed;
+    StringBuilder strBuilder = new StringBuilder();
+
+    while (response[ptr] != 0) {
+      compressed = isCompressed(response, ptr);
+      if (compressed != 0) {
+        ptr = compressed;
+      }
+      int labelLength = response[ptr];
+      byte[] labelBytes = Arrays.copyOfRange(response, ptr + 1, ptr + 1 + labelLength);
+      strBuilder.append(new String(labelBytes));
+      strBuilder.append(".");
       ptr += labelLength + 1;
     }
-    newName.deleteCharAt(newName.length() - 1);
-    return newName.toString();
+    strBuilder.deleteCharAt(strBuilder.length() - 1);
+    return strBuilder.toString();
+  }
+
+  private int isCompressed(byte[] buff, int ptr) {
+    int compressed = 0;
+    String ptrStr;
+    byte[] ptrBuff = new byte[]{buff[ptr], buff[ptr + 1]};
+
+    StringBuilder strBuilder = new StringBuilder(
+        Integer.toBinaryString(DnsUtils.bytesToUnsignedInt(ptrBuff)));
+    while (strBuilder.length() != 16) {
+      strBuilder.insert(0, '0');
+    }
+    ptrStr = strBuilder.toString();
+
+    if (ptrStr.charAt(0) == '1' && ptrStr.charAt(1) == '1') {
+      compressed = Integer.parseInt(ptrStr.substring(2, 16), 2);
+    }
+    return compressed;
   }
 
   public int getClassType() {
@@ -148,4 +167,25 @@ public class DnsRecord {
   public int getNumBytes() {
     return numBytes;
   }
+
+  public String getName() {
+    return name;
+  }
+
+  public QueryType getQueryType() {
+    return queryType;
+  }
+
+  public String getAlias() {
+    return alias;
+  }
+
+  public String getIpAddress() {
+    return ipAddress;
+  }
+
+  public String getNameServer() {
+    return nameServer;
+  }
+
 }

@@ -52,13 +52,15 @@ public class DnsHeader {
     return byteStream.toByteArray();
   }
 
-  public void parseHeader(byte[] header) {
+  public void parseHeader(byte[] header, int requestId) throws Exception {
     byte[] buff;
-    Formatter format = new Formatter();
 
     // Find ID
     buff = new byte[]{header[0], header[1]};
     id = DnsUtils.bytesToUnsignedInt(buff);
+    if (id != requestId) {
+      throw new Exception("Failed to verify ID of in response header");
+    }
 
     // Query flags
     buff = new byte[]{header[2], header[3]};
@@ -97,11 +99,11 @@ public class DnsHeader {
     return answerCount;
   }
 
-  public int getAuthRecords() {
-    return authRecords;
-  }
-
   public int getQuestionCount() {
     return questionCount;
+  }
+
+  public int getAuthRecords() {
+    return authRecords;
   }
 }

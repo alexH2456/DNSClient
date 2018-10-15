@@ -6,5 +6,6 @@ public enum ResponseCode {
   SERVER_FAILURE,
   NAME_ERROR,
   NOT_IMPLEMENTED,
-  REFUSED
+  REFUSED,
+  UNKNOWN
 }

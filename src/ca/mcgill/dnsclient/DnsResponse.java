@@ -1,33 +1,38 @@
 package ca.mcgill.dnsclient;
 
-import ca.mcgill.dnsclient.utils.DnsUtils;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 public class DnsResponse {
 
-  private String domainName;
   private int startIdx;
   private DnsHeader header;
   private ResponseCode responseCode;
   private ArrayList<DnsRecord> dnsRecords;
+  private ArrayList<DnsRecord> addRecords;
+  private int requestId;
+  private boolean authoritative;
 
-  public DnsResponse(int headerSize) {
+  public DnsResponse(int startIdx, int requestId) {
     this.header = new DnsHeader();
     this.dnsRecords = new ArrayList<>();
-    this.startIdx = headerSize;
+    this.addRecords = new ArrayList<>();
+    this.startIdx = startIdx;
+    this.requestId = requestId;
   }
 
   public void parseResponse(byte[] response) throws Exception {
-    header.parseHeader(Arrays.copyOfRange(response, 0, 12));
+    header.parseHeader(Arrays.copyOfRange(response, 0, 12), requestId);
     String queryBits = Integer.toBinaryString(header.getQueryFlags());
     if (queryBits.charAt(0) != '1') {
       throw new Exception("Query bit in header does not match expected (1)");
     }
-    boolean auth = queryBits.charAt(5) == '1';
+    authoritative = queryBits.charAt(5) == '1';
     String rcode = queryBits.substring(12, 16);
     switch (rcode) {
+      case "0000":
+        responseCode = ResponseCode.NO_ERROR;
+        break;
       case "0001":
         responseCode = ResponseCode.FORMAT_ERROR;
         throw new Exception("Format error: the name server was unable to interpret the query");
@@ -44,11 +49,10 @@ public class DnsResponse {
             "Not implemented: the name server does not support the requested kind of query");
       case "0101":
         responseCode = ResponseCode.REFUSED;
-        throw new Exception(
-            "Refused: the name server refuses to perform the requested operation for policy reasons");
+        throw new Exception("Refused: the name server refuses to perform the requested operation for policy reasons");
       default:
-        responseCode = ResponseCode.NO_ERROR;
-        break;
+        responseCode = ResponseCode.UNKNOWN;
+        throw new Exception("Unknown response code in header: " + rcode);
     }
     if (header.getQuestionCount() != 1) {
       throw new Exception("Response header question count does not match");
@@ -66,18 +70,66 @@ public class DnsResponse {
       parsedAnswers += 1;
       idx += newRecord.getNumBytes();
     }
-    System.out.println("");
+
+    // Parse additional records (if any)
+    int parsedAdd = 0;
+    while (parsedAdd != addCount && header.getAuthRecords() == 0) {
+      DnsRecord newRecord = new DnsRecord();
+      newRecord.parseRecord(response, idx);
+      addRecords.add(newRecord);
+      parsedAdd += 1;
+      idx += newRecord.getNumBytes();
+    }
+  }
+
+  public void printResponse() {
+    if (!dnsRecords.isEmpty()) {
+      System.out.println("***Answer Section (" + dnsRecords.size() + " record(s))***");
+      printRecords(dnsRecords);
+    }
+    if (!addRecords.isEmpty()) {
+      System.out.println("***Additional Section (" + dnsRecords.size() + " record(s))***");
+      printRecords(addRecords);
+    }
+  }
+
+  private void printRecords(ArrayList<DnsRecord> records) {
+    String type;
+    String result;
+    int ttl;
+    for (DnsRecord record : dnsRecords) {
+      String auth = authoritative ? "auth" : "noauth";
+      ttl = record.getTtl();
+      if (record.getQueryType() == QueryType.A) {
+        type = "IP";
+        result = record.getIpAddress();
+      } else if (record.getQueryType() == QueryType.CNAME) {
+        type = "CNAME";
+        result = record.getAlias();
+      } else if (record.getQueryType() == QueryType.MX) {
+        type = "MX";
+        result = record.getExchange() + "\t" + record.getPreference();
+      } else {
+        type = "NS";
+        result = record.getNameServer();
+      }
+      System.out.println(type + "\t" + result + "\t" + ttl + "\t" + auth);
+    }
   }
 
   public DnsHeader getHeader() {
     return header;
   }
 
-  public String getDomainName() {
-    return domainName;
-  }
-
   public ResponseCode getResponseCode() {
     return responseCode;
+  }
+
+  public ArrayList<DnsRecord> getDnsRecords() {
+    return dnsRecords;
+  }
+
+  public boolean isAuthoritative() {
+    return authoritative;
   }
 }
