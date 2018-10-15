@@ -121,6 +121,10 @@ public class DnsClient {
               }
               server[i] = (byte) num;
             }
+
+            if (!argsIterator.hasNext()) {
+              throw new IllegalArgumentException("Must specify domain name");
+            }
             name = argsIterator.next();
             String[] labels = name.split("\\.");
             for (String label : labels) {
