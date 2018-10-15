@@ -41,8 +41,8 @@ public class DnsClient {
       byte[] sendData = dnsRequest.constructDnsRequest();
       DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, ipAddress, dnsPort);
 
-      DnsResponse dnsResponse = new DnsResponse(sendData.length);
-      byte[] receiveData = new byte[1024];
+      DnsResponse dnsResponse = new DnsResponse(sendData.length, dnsRequest.getHeader().getId());
+      byte[] receiveData = new byte[512];
       DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 
       printRequestInfo();
@@ -54,6 +54,7 @@ public class DnsClient {
 
       clientSocket.close();
       dnsResponse.parseResponse(receivePacket.getData());
+      dnsResponse.printResponse();
 
     } catch (SocketException e) {
       System.out.println("ERROR\tFailed to create socket: " + e.getMessage());
@@ -64,12 +65,10 @@ public class DnsClient {
     } catch (UnknownHostException e) {
       System.out.println("ERROR\tUnknown host: " + e.getMessage());
     } catch (Exception e) {
-      if (e.getMessage() == null) {
-        e.printStackTrace();
-      } else {
-        System.out.println("ERROR\t" + e.getCause() + "\t" + e.getMessage());
-        e.printStackTrace();
+      if (e.getMessage() != null) {
+        System.out.println("ERROR\t" + "\t" + e.getMessage());
       }
+      e.printStackTrace();
     }
   }
 
