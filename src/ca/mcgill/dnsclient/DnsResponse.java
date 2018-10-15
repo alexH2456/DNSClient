@@ -38,7 +38,8 @@ public class DnsResponse {
         throw new Exception("Format error: the name server was unable to interpret the query");
       case "0010":
         responseCode = ResponseCode.SERVER_FAILURE;
-        throw new Exception("Server failure: the name server was unable to process this query due to a problem with the name server");
+        throw new Exception(
+            "Server failure: the name server was unable to process this query due to a problem with the name server");
       case "0011":
         responseCode = ResponseCode.NAME_ERROR;
         System.out.println("NOTFOUND");
@@ -49,7 +50,8 @@ public class DnsResponse {
             "Not implemented: the name server does not support the requested kind of query");
       case "0101":
         responseCode = ResponseCode.REFUSED;
-        throw new Exception("Refused: the name server refuses to perform the requested operation for policy reasons");
+        throw new Exception(
+            "Refused: the name server refuses to perform the requested operation for policy reasons");
       default:
         responseCode = ResponseCode.UNKNOWN;
         throw new Exception("Unknown response code in header: " + rcode);
@@ -84,11 +86,11 @@ public class DnsResponse {
 
   public void printResponse() {
     if (!dnsRecords.isEmpty()) {
-      System.out.println("***Answer Section (" + dnsRecords.size() + " record(s))***");
+      System.out.println("\n*** Answer Section (" + dnsRecords.size() + " records) ***");
       printRecords(dnsRecords);
     }
     if (!addRecords.isEmpty()) {
-      System.out.println("***Additional Section (" + dnsRecords.size() + " record(s))***");
+      System.out.println("\n*** Additional Section (" + dnsRecords.size() + " records) ***");
       printRecords(addRecords);
     }
   }

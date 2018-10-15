@@ -8,9 +8,7 @@ public class DnsRecord {
 
   private String name;
   private QueryType queryType;
-  private int classType;
   private int ttl;
-  private int rdLength;
   private String ipAddress;
   private String nameServer;
   private String alias;
@@ -26,10 +24,12 @@ public class DnsRecord {
   public void parseRecord(byte[] response, int start) throws Exception {
     currentIdx = start;
 
+    // Get name
     name = buildName(response, currentIdx);
 
     // Get query type
-    int qType = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+    int qType = DnsUtils
+        .bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
     currentIdx += 2;
     switch (qType) {
       case 0x0001:
@@ -49,18 +49,22 @@ public class DnsRecord {
     }
 
     // Get class type
-    classType = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+    int classType = DnsUtils
+        .bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
     currentIdx += 2;
     if (classType != 0x0001) {
       throw new Exception("Invalid class type in response");
     }
 
     // Get TTL
-    ttl = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1], response[currentIdx + 2], response[currentIdx + 3]});
+    ttl = DnsUtils.bytesToUnsignedInt(
+        new byte[]{response[currentIdx], response[currentIdx + 1], response[currentIdx + 2],
+            response[currentIdx + 3]});
     currentIdx += 4;
 
     // Get RData length
-    rdLength = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+    int rdLength = DnsUtils
+        .bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
     currentIdx += 2;
 
     // Parse RDATA
@@ -73,7 +77,8 @@ public class DnsRecord {
     } else if (queryType == QueryType.CNAME) {
       alias = buildRData(response, currentIdx);
     } else {
-      preference = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+      preference = DnsUtils
+          .bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
       exchange = buildRData(response, currentIdx + 2);
     }
     currentIdx += rdLength;
@@ -144,20 +149,12 @@ public class DnsRecord {
     return compressed;
   }
 
-  public int getClassType() {
-    return classType;
-  }
-
   public String getExchange() {
     return exchange;
   }
 
   public int getPreference() {
     return preference;
-  }
-
-  public int getRdLength() {
-    return rdLength;
   }
 
   public int getTtl() {

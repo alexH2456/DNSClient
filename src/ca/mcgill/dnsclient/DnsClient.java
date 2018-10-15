@@ -50,9 +50,12 @@ public class DnsClient {
       clientSocket.send(sendPacket);
       clientSocket.receive(receivePacket);
       long stop = System.currentTimeMillis();
-      System.out.println("Response received after " + (stop - start) / 1000.0 + " seconds (" + retries + " retries)");
+      System.out.println(
+          "Response received after " + (stop - start) / 1000.0 + " seconds (" + retries
+              + " retries)");
 
       clientSocket.close();
+
       dnsResponse.parseResponse(receivePacket.getData());
       dnsResponse.printResponse();
 
