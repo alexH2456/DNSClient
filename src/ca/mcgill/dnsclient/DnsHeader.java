@@ -5,7 +5,6 @@ import ca.mcgill.dnsclient.utils.DnsUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Formatter;
 import java.util.Random;
 
 public class DnsHeader {

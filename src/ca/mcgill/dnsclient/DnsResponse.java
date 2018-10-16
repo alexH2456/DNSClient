@@ -87,15 +87,15 @@ public class DnsResponse {
   public void printResponse() {
     if (!dnsRecords.isEmpty()) {
       System.out.println("\n*** Answer Section (" + dnsRecords.size() + " records) ***");
-      printRecords(dnsRecords);
+      printRecords();
     }
     if (!addRecords.isEmpty()) {
       System.out.println("\n*** Additional Section (" + dnsRecords.size() + " records) ***");
-      printRecords(addRecords);
+      printRecords();
     }
   }
 
-  private void printRecords(ArrayList<DnsRecord> records) {
+  private void printRecords() {
     String type;
     String result;
     int ttl;

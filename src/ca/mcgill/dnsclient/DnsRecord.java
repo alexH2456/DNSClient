@@ -28,8 +28,7 @@ public class DnsRecord {
     name = buildName(response, currentIdx);
 
     // Get query type
-    int qType = DnsUtils
-        .bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+    int qType = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
     currentIdx += 2;
     switch (qType) {
       case 0x0001:
@@ -49,22 +48,18 @@ public class DnsRecord {
     }
 
     // Get class type
-    int classType = DnsUtils
-        .bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+    int classType = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
     currentIdx += 2;
     if (classType != 0x0001) {
       throw new Exception("Invalid class type in response");
     }
 
     // Get TTL
-    ttl = DnsUtils.bytesToUnsignedInt(
-        new byte[]{response[currentIdx], response[currentIdx + 1], response[currentIdx + 2],
-            response[currentIdx + 3]});
+    ttl = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1], response[currentIdx + 2], response[currentIdx + 3]});
     currentIdx += 4;
 
     // Get RData length
-    int rdLength = DnsUtils
-        .bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+    int rdLength = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
     currentIdx += 2;
 
     // Parse RDATA
@@ -77,8 +72,7 @@ public class DnsRecord {
     } else if (queryType == QueryType.CNAME) {
       alias = buildRData(response, currentIdx);
     } else {
-      preference = DnsUtils
-          .bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
+      preference = DnsUtils.bytesToUnsignedInt(new byte[]{response[currentIdx], response[currentIdx + 1]});
       exchange = buildRData(response, currentIdx + 2);
     }
     currentIdx += rdLength;
