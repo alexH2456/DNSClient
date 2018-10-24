@@ -50,9 +50,7 @@ public class DnsClient {
       clientSocket.send(sendPacket);
       clientSocket.receive(receivePacket);
       long stop = System.currentTimeMillis();
-      System.out.println(
-          "Response received after " + (stop - start) / 1000.0 + " seconds (" + retries
-              + " retries)");
+      System.out.println("Response received after " + (stop - start) / 1000.0 + " seconds (" + retries + " retries)");
 
       clientSocket.close();
 
@@ -70,8 +68,9 @@ public class DnsClient {
     } catch (Exception e) {
       if (e.getMessage() != null) {
         System.out.println("ERROR\t" + "\t" + e.getMessage());
+      } else {
+        e.printStackTrace();
       }
-      e.printStackTrace();
     }
   }
 
@@ -132,6 +131,8 @@ public class DnsClient {
                 throw new IllegalArgumentException("Illegal domain name, label too long");
               }
             }
+          } else {
+            throw new IllegalArgumentException("Must specify DNS server using format: @server_ip");
           }
           break;
       }
