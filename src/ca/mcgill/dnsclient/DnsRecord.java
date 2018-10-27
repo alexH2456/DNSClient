@@ -85,11 +85,6 @@ public class DnsRecord {
     boolean compression = false;
     StringBuilder strBuilder = new StringBuilder();
 
-//    compressed = isCompressed(response, ptr);
-//    if (compressed != 0) {
-//      ptr = compressed;
-//      compression = true;
-//    }
     while (response[ptr] != 0) {
       compressed = isCompressed(response, ptr);
       if (compressed != 0) {
