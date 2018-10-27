@@ -82,24 +82,31 @@ public class DnsRecord {
 
   private String buildName(byte[] response, int ptr) {
     int compressed;
+    boolean compression = false;
     StringBuilder strBuilder = new StringBuilder();
 
-    compressed = isCompressed(response, ptr);
-    if (compressed != 0) {
-      ptr = compressed;
-    }
+//    compressed = isCompressed(response, ptr);
+//    if (compressed != 0) {
+//      ptr = compressed;
+//      compression = true;
+//    }
     while (response[ptr] != 0) {
+      compressed = isCompressed(response, ptr);
+      if (compressed != 0) {
+        ptr = compressed;
+        compression = true;
+      }
       int labelLength = response[ptr];
       byte[] labelBytes = Arrays.copyOfRange(response, ptr + 1, ptr + 1 + labelLength);
       strBuilder.append(new String(labelBytes));
       strBuilder.append(".");
       ptr += labelLength + 1;
 
-      if (compressed == 0) {
+      if (!compression) {
         currentIdx += labelLength + 1;
       }
     }
-    if (compressed != 0) {
+    if (compression) {
       currentIdx += 2;
     }
     strBuilder.deleteCharAt(strBuilder.length() - 1);
